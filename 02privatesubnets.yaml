@@ -1,0 +1,63 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: "Tenant subnet intrastructure CloudFormation template"
+Parameters:
+  privateacidr:
+    Type: String
+    Description: CIDR to use for private subnet a.
+    MinLength: 9
+    MaxLength: 18
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+    ConstraintDescription: Must be a valid CIDR range in the form x.x.x.x/24
+    Default: 10.15.6.0/24
+  privatebcidr:
+    Type: String
+    Description: CIDR to use for private subnet b.
+    MinLength: 9
+    MaxLength: 18
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+    ConstraintDescription: Must be a valid CIDR range in the form x.x.x.x/24
+    Default: 10.15.7.0/24
+Resources:
+  SubnetPrivateA: # Private Subnet for App Env in AZ - A
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      AvailabilityZone: !Select [0, !GetAZs ]
+      CidrBlock: !Ref privateacidr
+      MapPublicIpOnLaunch: false
+      VpcId: !ImportValue tenantvpc-vpcid
+  SubnetPrivateB: # Private Subnet for App Env in AZ - B (not used yet)
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      AvailabilityZone: !Select [1, !GetAZs ]
+      CidrBlock: !Ref privatebcidr
+      MapPublicIpOnLaunch: false
+      VpcId: !ImportValue tenantvpc-vpcid
+  RouteTablePrivateA:
+    Type: "AWS::EC2::RouteTable"
+    Properties:
+      VpcId: !ImportValue tenantvpc-vpcid
+  RouteTablePrivateB:
+    Type: "AWS::EC2::RouteTable"
+    Properties:
+      VpcId: !ImportValue tenantvpc-vpcid
+  SubnetRouteTableAssociatePrivateA: # Associates the subnet with a route table - passed via parameter
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      RouteTableId: !Ref RouteTablePrivateA
+      SubnetId: !Ref SubnetPrivateA # Associates the subnet with a route table - passed via parameter
+  SubnetRouteTableAssociatePrivateB: # Associates the subnet with a route table - passed via parameter
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      RouteTableId: !Ref RouteTablePrivateB
+      SubnetId: !Ref SubnetPrivateB # Associates the subnet with a route table - passed via parameter
+Outputs:
+  privatesubneta:
+    Description: ID of Private Subnet - A
+    Value: !Ref SubnetPrivateA
+    Export: # added to export
+      Name: private-subnet-a
+  privatesubnetb:
+    Description: ID of Private Subnet - B
+    Value: !Ref SubnetPrivateB
+    Export: # added to export
+      Name: private-subnet-b
